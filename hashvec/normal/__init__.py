@@ -1,17 +1,20 @@
 import jax
 import jax.numpy as np
+from jax.config import config
+config.update("jax_debug_nans", True) 
 
 @jax.jit
 def normalize(X):
     return X/np.linalg.norm(X, ord=2, axis = -1, keepdims=True)
 
 @jax.jit
-def rotate(P, V, *args):
+def rotate(P, V, M, S):
     P /= np.linalg.norm(P, ord=2, axis = -1, keepdims=True)
     θ = np.linalg.norm(V, ord=2, axis = -1, keepdims=True)
     pos = P*np.cos(θ) + V*np.sinc(θ/np.pi)
-    ARGS = [I*np.cos(θ) - P*np.linalg.norm(I, axis = -1, keepdims = True)*np.sin(θ) for I in args]
-    return pos, *ARGS
+    M = M*np.cos(θ) - P*np.linalg.norm(M, axis = -1, keepdims = True)*np.sin(θ)
+    S = 
+    return pos, M, S
 
 @jax.jit
 def cost(normal):
@@ -56,8 +59,7 @@ def uniform_normal_vector(n: int, m: int, steps: int = 500, learning_rate = 0.25
         step = (iters + 0.1) / (steps / 3) if iters < steps / 3 else (steps - iters) / (2 * steps / 3) * 0.9 + 0.1
         step *= eff * learning_rate
         
-        normal, M, S = rotate(normal, step, M, S**0.5)
-        S**=2
+        normal, M, S = rotate(normal, step, M, S)
         # normal = normalize(normal)
         if iters % 10 == 0:
             print(cost(normal), np.linalg.norm(normal, ord=2, axis = -1).mean(), abs(step).min(), abs(step).max(), debug)
