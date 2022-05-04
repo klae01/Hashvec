@@ -39,18 +39,23 @@ def uniform_normal_vector(n: int, m: int, steps: int = 500, learning_rate = 0.25
         eff = M / (1-β1**(1 + iters))
         eff /= ( S / (1-β2**(1 + iters)) )**0.5 + Ɛ
 
-        # # clip norm 
-        # norm = np.linalg.norm(eff, ord = 2, axis = -1, keepdims = True)
-        # eff = np.where(norm > 0.1, eff / norm * 0.1, eff)
 
         # scheduler
         step = (iters + 0.1) / (steps / 3) if iters < steps / 3 else (steps - iters) / (2 * steps / 3) * 0.9 + 0.1
-        step *= eff * learning_rate
+        step *= learning_rate
+        step *= eff
 
-        step += EYE_MAT
-        step /= abs(np.linalg.det(step))[..., None, None]
+        scale = abs(np.linalg.det(EYE_MAT+step))
+        step /= scale[..., None, None]
         
-        normal = np.einsum("ijk,ik->ij", step, normal)
+        delta = np.einsum("ijk,ik->ij", step, normal)
+
+        # clip norm 
+        norm = np.linalg.norm(delta, ord = 2, axis = -1, keepdims = True)
+        delta = np.where(norm > 0.01, delta / norm * 0.01, delta)
+        
+        normal = normal / scale[..., None] + delta
+
         if iters % 10 == 0:
             print(cost_v, np.linalg.norm(normal, ord=2, axis = -1).mean(), (step).min(), (step).max(), abs(step).min(), abs(step).max())
         normal = normalize(normal)
