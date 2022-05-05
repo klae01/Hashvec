@@ -17,7 +17,7 @@ class Tests(unittest.TestCase):
         for dim in [2, 3, 4, 8, 16, 32, 64]:
             A = normalize(np.random.normal(0, 1, [CASE, dim]))
             ROT = np.stack([random_rot_mat(dim) for _ in range(CASE)], axis=0)
-            B = np.einsum("ij,ijk->ik", A, ROT)
+            B = normalize(np.einsum("ij,ijk->ik", A, ROT))
 
             IND = simple_rotation_matrix(A, B)
             # print(abs(B - np.einsum("ij,ijk->ik", A, IND)).sum())
@@ -40,7 +40,7 @@ class Tests(unittest.TestCase):
             )
             self.assertTrue(
                 np.mean(no_move_error) > np.mean(infered_error) * 10,
-                f"{CASE} {dim} : it is not correct rotation",
+                f"{CASE} {dim} : it is not correct rotation {np.mean(no_move_error)} >? {np.mean(infered_error)}",
             )
 
             if dim > 2:
@@ -52,7 +52,7 @@ class Tests(unittest.TestCase):
                 dist_max = np.linalg.norm(A - B, ord=2, axis=-1)[:, None]
                 self.assertTrue(
                     almostGreater(dist_max, dist_sample),
-                    f"{CASE} {dim} : it is not minimal movement",
+                    f"{CASE} {dim} : it is not minimal movement ({dist_max} >? {dist_sample})",
                 )
 
     def test_non_rotate(self):

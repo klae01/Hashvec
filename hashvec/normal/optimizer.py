@@ -1,5 +1,4 @@
 from .__import__ import *
-from .utils import normalize
 
 
 class optimizer:

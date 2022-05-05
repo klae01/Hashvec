@@ -1,6 +1,7 @@
 try:
     import jax
     import jax.numpy as np
+    from functools import partial
 
     use_jax = True
     # from jax.config import config

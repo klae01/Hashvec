@@ -12,14 +12,31 @@ def rotate(P, V):
     return pos
 
 
-@jax.jit
 def cost(normal):
     X = np.square(np.einsum("im,jm->ij", normal, normal))
     X = X.sum() - np.einsum("ii", X)
     return X
 
 
-grad = jax.value_and_grad(cost)
+grad = jax.jit(jax.value_and_grad(cost))
+
+
+@partial(jax.jit, static_argnums=(0,))
+def __uniform_normal_vector(opt, normal, n, learning_rate):
+    # Gradient
+    cost_v, grad_v = map(lambda x: x / (n * (n - 1)), grad(normal))
+    eff = opt.update(normal, grad_v)
+
+    step = learning_rate * eff
+
+    new_normal = rotate(normal, step)
+    ROT = simple_rotation_matrix(normal, new_normal)
+
+    normal = new_normal
+    opt.M = np.einsum("ij,ijk->ik", opt.M, ROT)
+    opt.S = ((opt.S[:, None] * abs(ROT)) ** 2).sum(axis=1) ** 0.5
+
+    return cost_v, step, new_normal
 
 
 def uniform_normal_vector(
@@ -31,25 +48,15 @@ def uniform_normal_vector(
     opt = optimizer()
 
     for iters in range(steps):
-        # Gradient
-        cost_v, grad_v = map(lambda x: x / (n * (n - 1)), grad(normal))
-        eff = opt.update(normal, grad_v)
-
         # scheduler
-        step = (
+        step_size = (
             (iters + 0.1) / (steps / 3)
             if iters < steps / 3
             else (steps - iters) / (2 * steps / 3) * 0.9 + 0.1
         )
-        step *= -learning_rate
-        step *= eff
+        step_size *= -learning_rate
 
-        new_normal = rotate(normal, step)
-        ROT = simple_rotation_matrix(normal, new_normal)
-
-        normal = new_normal
-        opt.M = np.einsum("ij,ijk->ik", opt.M, ROT)
-        opt.S = (opt.S[:, None] * abs(ROT) ** 2).sum(axis=1) ** 0.5
+        cost_v, step, normal = __uniform_normal_vector(opt, normal, n, step_size)
 
         if verbose and iters % 10 == 0:
             print(
