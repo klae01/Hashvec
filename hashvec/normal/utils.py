@@ -2,8 +2,16 @@ from .__import__ import *
 import numpy as onp
 
 
-def random_normal(*args, **kwargs):
-    return np.asarray(onp.random.normal(*args, **kwargs), dtype=compute_dtype)
+def random_normal(offset=0, scale=1, shape=[]):
+    if use_jax:
+        return (
+            jax.random.normal(
+                jax.random.PRNGKey(123), tuple(shape), dtype=compute_dtype
+            )
+            * scale
+            + offset
+        )
+    return np.asarray(onp.random.normal(offset, scale, shape), dtype=compute_dtype)
 
 
 def normalize(X):
@@ -26,6 +34,7 @@ def random_rot_mat(dim):
     return RET
 
 
+@jax.jit
 def simple_rotation_matrix(A, B):
     dim = A.shape[-1]
     A_OTH = B - np.einsum("ij,ik,ik->ij", A, A, B)
