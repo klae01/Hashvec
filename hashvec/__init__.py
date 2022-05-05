@@ -1,12 +1,12 @@
 import os
-import json
-import numpy as np
+import warnings
 
-from hashvec.normal import uniform_normal_vector
+from .normal import uniform_normal_vector
+from .normal.__import__ import compute_dtype, np, onp
 
 
-def build_table(num_plain, dimansions, verbose=False):
-    assert num_plain < dimansions
+def build_table(num_plain, dimansions, save_cache=True, verbose=False):
+    assert num_plain > dimansions
     result = {}
 
     if verbose:
@@ -17,16 +17,22 @@ def build_table(num_plain, dimansions, verbose=False):
         RANGE = range(dimansions, num_plain)
 
     for vector_cnt in RANGE:
-        file_name = f"/tmp/hashvec/{vector_cnt}_{dimansions}.json"
+        file_name = f"/tmp/hashvec/{vector_cnt}_{dimansions}.npy"
+        normal = None
         if os.path.exists(file_name):
-            with open(file_name, "r") as fp:
-                normal = json.load(fp)
-        else:
+            try:
+                normal = np.asarray(onp.load(file_name), dtype=compute_dtype)
+                normal /= np.linalg.norm(normal, ord=2, axis=-1, keepdims=True)
+            except:
+                pass
+        if normal is None:
             normal = uniform_normal_vector(vector_cnt, dimansions)
-
-            os.makedirs("/tmp/hashvec", exist_ok=True)
-            with open(file_name, "w") as fp:
-                json.dump(np.asarray(normal).tolist(), fp)
+            if save_cache:
+                try:
+                    os.makedirs("/tmp/hashvec", exist_ok=True)
+                    onp.save(file_name, onp.asarray(normal, dtype=onp.float32))
+                except Exception as e:
+                    warnings.warn(e)
 
         result[(vector_cnt, dimansions)] = normal
     return result
