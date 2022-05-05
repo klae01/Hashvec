@@ -1,7 +1,9 @@
+from functools import partial
+
 try:
+
     import jax
     import jax.numpy as np
-    from functools import partial
 
     use_jax = True
     # from jax.config import config
@@ -10,5 +12,7 @@ except:
     import numpy as np
 
     use_jax = False
+
+import numpy as onp
 
 compute_dtype = np.float32

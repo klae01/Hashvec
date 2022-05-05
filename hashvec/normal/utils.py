@@ -1,5 +1,4 @@
 from .__import__ import *
-import numpy as onp
 
 
 def random_normal(offset=0, scale=1, shape=[]):
@@ -19,19 +18,23 @@ def normalize(X):
     return X / (norm + (norm == 0))
 
 
-def random_rot_mat(dim):
-    RET = onp.eye(dim)
-    for _ in range(1000):
-        ROT = onp.eye(dim)
-        ax1, ax2 = onp.random.randint(0, dim, [2])
-        θ = onp.random.uniform(-np.pi, np.pi) * 0.001
-        if ax1 != ax2:
-            ROT[ax1, ax1] = onp.cos(θ)
-            ROT[ax1, ax2] = onp.sin(θ)
-            ROT[ax2, ax1] = -onp.sin(θ)
-            ROT[ax2, ax2] = onp.cos(θ)
-        RET = RET @ ROT
-    return RET
+def random_rot_mat(dim, angle_sample=1000, angle_max=0.001 * np.pi):
+    ROT = onp.eye(dim)
+    AX = onp.random.randint(0, dim, [angle_sample, 2])
+    θ = onp.random.uniform(-angle_max, angle_max, angle_sample)
+
+    rot_mat = onp.transpose(
+        [
+            [onp.cos(θ), onp.sin(θ)],
+            [-onp.sin(θ), onp.cos(θ)],
+        ],
+        [2, 0, 1],
+    )
+
+    for ax, rot in zip(AX, rot_mat):
+        if ax[0] != ax[1]:
+            ROT[ax] = rot @ ROT[ax]
+    return ROT
 
 
 @jax.jit

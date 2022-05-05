@@ -1,7 +1,6 @@
-import jax
 from .__import__ import *
-from .utils import random_normal, normalize, simple_rotation_matrix
 from .optimizer import optimizer
+from .utils import normalize, random_normal, simple_rotation_matrix
 
 
 @jax.jit
@@ -34,13 +33,17 @@ def __uniform_normal_vector(opt, normal, n, learning_rate):
 
     normal = new_normal
     opt.M = np.einsum("ij,ijk->ik", opt.M, ROT)
-    opt.S = ((opt.S[:, None] * abs(ROT)) ** 2).sum(axis=1) ** 0.5
+    opt.S = np.linalg.norm(opt.S[:, None] * ROT, ord=2, axis=1)
 
     return cost_v, step, new_normal
 
 
 def uniform_normal_vector(
-    n: int, m: int, steps: int = 500, learning_rate=3000.0, verbose=False
+    n: int,
+    m: int,
+    steps: int = 500,
+    learning_rate: float = 100.0,
+    verbose: bool = False,
 ):
     # n dimension
     # m normal vector
